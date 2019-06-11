@@ -23,7 +23,12 @@ var (
 )
 
 // RegisterLocations add a set of MySQL instance locations with name to reference it.
-func RegisterLocations(name string, locations []*Location) {
+func RegisterLocations(name string, locations []*Location) error {
+	if 0 == len(locations) {
+		return &EmptyLocationsErr{
+			Name: name,
+		}
+	}
 	locationSetsLock.Lock()
 	defer locationSetsLock.Unlock()
 	if nil == locationSets {
@@ -48,6 +53,7 @@ func RegisterLocations(name string, locations []*Location) {
 	}
 	aux.totalTimeoutWeight = totalTimeoutWeight
 	locationSets[name] = aux
+	return nil
 }
 
 // UnregisterLocations remove a set of MySQL instance locations with previous register name.
