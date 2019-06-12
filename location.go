@@ -23,7 +23,7 @@ var (
 )
 
 // RegisterLocations add a set of MySQL instance locations with name to reference it.
-func RegisterLocations(name string, locations []*Location) error {
+func RegisterLocations(name string, locations []Location) error {
 	if 0 == len(locations) {
 		return &EmptyLocationsErr{
 			Name: name,
