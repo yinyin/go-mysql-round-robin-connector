@@ -23,7 +23,6 @@ func (loc *Location) dialContext(ctx context.Context, timeout time.Duration, bas
 
 type locationSet struct {
 	locations          []Location
-	lastConnectedIndex uint32
 	totalTimeoutWeight int64
 }
 

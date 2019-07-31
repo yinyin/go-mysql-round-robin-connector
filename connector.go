@@ -3,7 +3,6 @@ package mysqlroundrobinconnector
 import (
 	"context"
 	"net"
-	"sync/atomic"
 	"time"
 )
 
@@ -38,17 +37,13 @@ func RoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
 	if nil == locSet {
 		return nil, &UnknownLocationsErr{Name: addr}
 	}
-	locLen := len(locSet.locations)
-	startIndex := int(atomic.LoadUint32(&locSet.lastConnectedIndex) % uint32(locLen))
 	baseTime, remainNanoseconds, err := getContextRemainNanoseconds(ctx)
 	if nil != err {
 		return nil, err
 	}
 	dailsErr := &DialsErr{}
 	var targetTimeoutWeight int64
-	for i := 0; i < locLen; i++ {
-		targetIndex := (i + startIndex) % len(locSet.locations)
-		targetLoc := &locSet.locations[targetIndex]
+	for _, targetLoc := range locSet.locations {
 		targetTimeoutWeight += targetLoc.TimeoutWeight
 		var timeoutDuration time.Duration
 		if remainNanoseconds == 0 {
@@ -61,7 +56,6 @@ func RoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
 		if netConn, err := targetLoc.dialContext(ctx, timeoutDuration, baseTime); nil != err {
 			dailsErr.append(err)
 		} else {
-			atomic.StoreUint32(&locSet.lastConnectedIndex, uint32(targetIndex))
 			return netConn, nil
 		}
 	}
