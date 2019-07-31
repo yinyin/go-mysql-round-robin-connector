@@ -34,12 +34,11 @@ func main() {
 		timeoutDuration, len(serverLocations))
 	for loopCount > 0 {
 		loopCount--
-		hostnameText, err := queryHostname(username, password, dbName, timeoutDuration, serverLocations)
-		if nil != err {
-			log.Fatalf("failed on query hostname (loop-remain=%d): %v", loopCount, err)
-			return
+		if hostnameText, err := queryHostname(username, password, dbName, timeoutDuration, serverLocations); nil != err {
+			log.Printf("query hostname failed (remain=%d): %v", loopCount, err)
+		} else {
+			log.Printf("Hostname (remain=%d): %v", loopCount, hostnameText)
 		}
-		log.Printf("Hostname (remain=%d): %v", loopCount, hostnameText)
 		if loopCount > 0 {
 			time.Sleep(time.Second * 2)
 		}
