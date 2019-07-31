@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"time"
 	"log"
+	"time"
 
 	mysqlroundrobinconnector "github.com/yinyin/go-mysql-round-robin-connector"
 )
@@ -24,17 +24,24 @@ func queryHostname(username, password, dbName string, timeoutDuration time.Durat
 }
 
 func main() {
-	username, password, dbName, timeoutDuration, serverLocations, err := parseCommandParam()
+	username, password, dbName, timeoutDuration, serverLocations, loopCount, err := parseCommandParam()
 	if nil != err {
 		log.Fatalf("failed on parsing command parameter: %v", err)
 		return
 	}
-	log.Printf("username = %v, password = %v, db-name = %v, timeout = %v, %d server locations.",
-		username, password, dbName, timeoutDuration, len(serverLocations))
-	hostnameText, err := queryHostname(username, password, dbName, timeoutDuration, serverLocations)
-	if nil != err {
-		log.Fatalf("failed on query hostname: %v", err)
-		return
+	log.Printf("username = %v, password = %v, db-name = %v, looping = %d, timeout = %v, %d server locations.",
+		username, password, dbName, loopCount,
+		timeoutDuration, len(serverLocations))
+	for loopCount > 0 {
+		loopCount--
+		hostnameText, err := queryHostname(username, password, dbName, timeoutDuration, serverLocations)
+		if nil != err {
+			log.Fatalf("failed on query hostname (loop-remain=%d): %v", loopCount, err)
+			return
+		}
+		log.Printf("Hostname (remain=%d): %v", loopCount, hostnameText)
+		if loopCount > 0 {
+			time.Sleep(time.Second * 2)
+		}
 	}
-	log.Printf("Hostname: %v", hostnameText)
 }
