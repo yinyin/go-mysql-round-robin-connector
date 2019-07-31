@@ -16,7 +16,7 @@ func getContextRemainNanoseconds(ctx context.Context) (baseTime time.Time, remai
 		return
 	}
 	baseTime = time.Now()
-	remainNanoseconds = baseTime.Sub(deadline).Nanoseconds()
+	remainNanoseconds = deadline.Sub(baseTime).Nanoseconds()
 	if remainNanoseconds <= 0 {
 		err = &TimeoutErr{
 			ReferenceTime: baseTime,
