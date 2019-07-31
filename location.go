@@ -1,20 +1,30 @@
 package mysqlroundrobinconnector
 
 import (
+	"context"
+	"net"
 	"sync"
+	"time"
 )
 
 // Location is the network and address of MySQL server instance.
 type Location struct {
 	Network       string
 	Address       string
-	TimeoutWeight int
+	TimeoutWeight int64
+}
+
+func (loc *Location) dialContext(ctx context.Context, timeout time.Duration, baseTime time.Time) (conn net.Conn, err error) {
+	subCtx, ctxCancel := context.WithDeadline(ctx, baseTime.Add(timeout))
+	defer ctxCancel()
+	nd := net.Dialer{Timeout: timeout}
+	return nd.DialContext(subCtx, loc.Network, loc.Address)
 }
 
 type locationSet struct {
 	locations          []Location
-	lastConnectedIndex int
-	totalTimeoutWeight int
+	lastConnectedIndex uint32
+	totalTimeoutWeight int64
 }
 
 var (
@@ -37,9 +47,9 @@ func RegisterLocations(name string, locations []*Location) error {
 	aux := &locationSet{
 		locations: make([]Location, 0, len(locations)),
 	}
-	totalTimeoutWeight := 0
+	var totalTimeoutWeight int64
 	for _, loc := range locations {
-		var timeoutWeight int
+		var timeoutWeight int64
 		if timeoutWeight = loc.TimeoutWeight; timeoutWeight < 1 {
 			timeoutWeight = 1
 		}
@@ -50,6 +60,11 @@ func RegisterLocations(name string, locations []*Location) error {
 		}
 		aux.locations = append(aux.locations, nLoc)
 		totalTimeoutWeight = totalTimeoutWeight + timeoutWeight
+	}
+	if 0 == totalTimeoutWeight {
+		return &EmptyLocationsErr{
+			Name: name,
+		}
 	}
 	aux.totalTimeoutWeight = totalTimeoutWeight
 	locationSets[name] = aux
