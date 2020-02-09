@@ -60,7 +60,9 @@ func parseAddress(addrText string) (parsedAddr *parsedAddress) {
 	orderedCnt := -1
 	if orderedCntIdx > 0 {
 		t := addrText[locNameIdx+1 : orderedCntIdx]
-		if (t != "") && (t != "-") {
+		if t == "-" {
+			orderedCnt = 0
+		} else if t != "" {
 			v, err := strconv.ParseUint(t, 10, 16)
 			if nil != err {
 				log.Printf("ERROR: cannot parse ordered address count [%s] for location %s: %v", t, locName, err)

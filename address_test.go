@@ -59,7 +59,7 @@ func TestParseAddress03c(t *testing.T) {
 	if r.locationName != "loc-3" {
 		t.Errorf("unexpect location name: %s", r.locationName)
 	}
-	if r.orderedCount != -1 {
+	if r.orderedCount != 0 {
 		t.Errorf("unexpect ordered count: %d", r.orderedCount)
 	}
 }
