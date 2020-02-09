@@ -8,10 +8,11 @@ import (
 	mysqlroundrobinconnector "github.com/yinyin/go-mysql-round-robin-connector"
 )
 
-func parseCommandParam() (username, password, dbName string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location, loopCount int, err error) {
+func parseCommandParam() (username, password, dbName, extraAddrPath string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location, loopCount int, err error) {
 	flag.StringVar(&username, "user", "", "user name of database instance")
 	flag.StringVar(&password, "pass", "", "password of database instance")
 	flag.StringVar(&dbName, "db", "mysql", "database name")
+	flag.StringVar(&extraAddrPath, "extraAddr", "", "additional address path of DSN (such as `-`)")
 	flag.DurationVar(&timeoutDuration, "timeout", 10*time.Second, "timeout duration for dial")
 	flag.IntVar(&loopCount, "loop", 1, "looping count")
 	flag.Parse()

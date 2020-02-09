@@ -8,8 +8,8 @@ import (
 	mysqlroundrobinconnector "github.com/yinyin/go-mysql-round-robin-connector"
 )
 
-func queryHostname(username, password, dbName string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location) (hostnameText string, err error) {
-	dbConn, err := connectMySQL(username, password, dbName, timeoutDuration, serverLocations)
+func queryHostname(username, password, dbName, extraAddrPath string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location) (hostnameText string, err error) {
+	dbConn, err := connectMySQL(username, password, dbName, extraAddrPath, timeoutDuration, serverLocations)
 	if nil != err {
 		log.Printf("ERROR: failed on connecting to database instance: %v", err)
 		return
@@ -24,7 +24,7 @@ func queryHostname(username, password, dbName string, timeoutDuration time.Durat
 }
 
 func main() {
-	username, password, dbName, timeoutDuration, serverLocations, loopCount, err := parseCommandParam()
+	username, password, dbName, extraAddrPath, timeoutDuration, serverLocations, loopCount, err := parseCommandParam()
 	if nil != err {
 		log.Fatalf("failed on parsing command parameter: %v", err)
 		return
@@ -34,7 +34,7 @@ func main() {
 		timeoutDuration, len(serverLocations))
 	for loopCount > 0 {
 		loopCount--
-		if hostnameText, err := queryHostname(username, password, dbName, timeoutDuration, serverLocations); nil != err {
+		if hostnameText, err := queryHostname(username, password, dbName, extraAddrPath, timeoutDuration, serverLocations); nil != err {
 			log.Printf("query hostname failed (remain=%d): %v", loopCount, err)
 		} else {
 			log.Printf("Hostname (remain=%d): %v", loopCount, hostnameText)
