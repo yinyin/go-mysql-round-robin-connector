@@ -74,7 +74,7 @@ func TestCacheParsedAddress(t *testing.T) {
 	if (r.locationName != "loc-c") || (r.orderedCount != 9) || (r.shuffleCount != 11) {
 		t.Errorf("unexpect result: (name: %s, ordered: %d, shuffle: %d)", r.locationName, r.orderedCount, r.shuffleCount)
 	}
-	if r2 := checkAddrCache("loc-c/9/11"); (r2 == nil) || (r.locationName != "loc-c") || (r.orderedCount != 9) || (r.shuffleCount != 11) {
+	if r2 := checkAddrCache("loc-c/9/11"); (r2 == nil) || (r.locationName != "loc-c") || (r.orderedCount != 9) || (r.shuffleCount != 11	) {
 		t.Errorf("unexpect caching result: %#v", r2)
 	}
 }
