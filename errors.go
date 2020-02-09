@@ -22,6 +22,15 @@ func (e *EmptyLocationsErr) Error() string {
 	return "[EmptyLocationsErr: " + e.Name + "]"
 }
 
+// LocationSyntaxErr indicate failed on parsing given location address.
+type LocationSyntaxErr struct {
+	LocationText string
+}
+
+func (e *LocationSyntaxErr) Error() string {
+	return "[LocationSyntaxErr: " + e.LocationText + "]"
+}
+
 // TimeoutErr indicate operation is timeout.
 type TimeoutErr struct {
 	ReferenceTime time.Time

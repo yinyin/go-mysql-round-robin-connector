@@ -33,17 +33,22 @@ func portionOfTimeoutDuration(remainNanoseconds, timeoutWeight, totalTimeoutWeig
 
 // RoundRobinDialContext implements `DialContextFunc` of `github.com/go-sql-driver/mysql` driver.
 func RoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
-	locSet := getLocationSet(addr)
-	if nil == locSet {
-		return nil, &UnknownLocationsErr{Name: addr}
+	parsedAddr := parseAddress(addr)
+	if nil == parsedAddr {
+		return nil, &LocationSyntaxErr{LocationText: addr}
 	}
+	locSet := getLocationSet(parsedAddr.locationName)
+	if nil == locSet {
+		return nil, &UnknownLocationsErr{Name: parsedAddr.locationName}
+	}
+	locations := locSet.shuffledLocations(parsedAddr.orderedCount)
 	baseTime, remainNanoseconds, err := getContextRemainNanoseconds(ctx)
 	if nil != err {
 		return nil, err
 	}
 	dailsErr := &DialsErr{}
 	var targetTimeoutWeight int64
-	for _, targetLoc := range locSet.locations {
+	for _, targetLoc := range locations {
 		targetTimeoutWeight += targetLoc.TimeoutWeight
 		var timeoutDuration time.Duration
 		if remainNanoseconds == 0 {

@@ -2,6 +2,7 @@ package mysqlroundrobinconnector
 
 import (
 	"context"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -24,6 +25,26 @@ func (loc *Location) dialContext(ctx context.Context, timeout time.Duration, bas
 type locationSet struct {
 	locations          []Location
 	totalTimeoutWeight int64
+}
+
+func (s *locationSet) shuffledLocations(orderedCount int) (result []Location) {
+	if orderedCount == -1 {
+		return s.locations
+	}
+	totalCnt := len(s.locations)
+	if orderedCount > totalCnt {
+		orderedCount = totalCnt
+	}
+	result = append(make([]Location, 0, totalCnt), s.locations...)
+	for idx := orderedCount; idx < (totalCnt - 1); idx++ {
+		w := totalCnt - idx
+		t := rand.Intn(w)
+		if t == 0 {
+			continue
+		}
+		result[idx], result[idx+t] = result[idx+t], result[idx]
+	}
+	return
 }
 
 var (
