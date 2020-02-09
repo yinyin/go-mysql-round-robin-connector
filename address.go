@@ -45,22 +45,23 @@ func parseAddress(addrText string) (parsedAddr *parsedAddress) {
 	locNameIdx := 0
 	orderedCntIdx := 0
 	shuffleCntIdx := 0
+	boundIdx := len(addrText)
 	for idx, ch := range addrText {
 		if ch != '/' {
 			continue
 		}
 		if locNameIdx == 0 {
 			locNameIdx = idx
-			orderedCntIdx = len(addrText)
-		} else if orderedCntIdx == 0 {
+			orderedCntIdx = boundIdx
+		} else if orderedCntIdx == boundIdx {
 			orderedCntIdx = idx
-			shuffleCntIdx = len(addrText)
-		} else if shuffleCntIdx == 0 {
+			shuffleCntIdx = boundIdx
+		} else if shuffleCntIdx == boundIdx {
 			shuffleCntIdx = idx
 		}
 	}
 	if locNameIdx == 0 {
-		locNameIdx = len(addrText)
+		locNameIdx = boundIdx
 	}
 	if locNameIdx == 0 {
 		return nil
