@@ -22,29 +22,39 @@ func (loc *Location) dialContext(ctx context.Context, timeout time.Duration, bas
 	return nd.DialContext(subCtx, loc.Network, loc.Address)
 }
 
+type Options struct {
+	PreferFirstLocation bool
+	ShuffleLocations    bool
+}
+
 type locationSet struct {
 	locations          []Location
 	totalTimeoutWeight int64
+
+	lck               sync.Mutex
+	nextDialLocation  int
+	shuffleOnNextDial bool
+
+	preferFirstLocation bool
+	shuffleLocations    bool
 }
 
-func (s *locationSet) shuffledLocations(orderedCount int) (result []Location) {
-	if orderedCount == -1 {
-		return s.locations
+func (s *locationSet) shuffleLocationsInPlace(skipCount int) {
+	if skipCount < 0 {
+		return
 	}
 	totalCnt := len(s.locations)
-	if orderedCount > totalCnt {
-		orderedCount = totalCnt
+	if skipCount > totalCnt {
+		return
 	}
-	result = append(make([]Location, 0, totalCnt), s.locations...)
-	for idx := orderedCount; idx < (totalCnt - 1); idx++ {
+	for idx := skipCount; idx < (totalCnt - 1); idx++ {
 		w := totalCnt - idx
 		t := rand.Intn(w)
 		if t == 0 {
 			continue
 		}
-		result[idx], result[idx+t] = result[idx+t], result[idx]
+		s.locations[idx], s.locations[idx+t] = s.locations[idx+t], s.locations[idx]
 	}
-	return
 }
 
 var (
@@ -53,8 +63,8 @@ var (
 )
 
 // RegisterLocations add a set of MySQL instance locations with name to reference it.
-func RegisterLocations(name string, locations []Location) error {
-	if 0 == len(locations) {
+func RegisterLocations(name string, locations []Location, opts *Options) error {
+	if len(locations) == 0 {
 		return &EmptyLocationsErr{
 			Name: name,
 		}
@@ -81,12 +91,16 @@ func RegisterLocations(name string, locations []Location) error {
 		aux.locations = append(aux.locations, nLoc)
 		totalTimeoutWeight = totalTimeoutWeight + timeoutWeight
 	}
-	if 0 == totalTimeoutWeight {
+	if totalTimeoutWeight == 0 {
 		return &EmptyLocationsErr{
 			Name: name,
 		}
 	}
 	aux.totalTimeoutWeight = totalTimeoutWeight
+	if opts != nil {
+		aux.preferFirstLocation = opts.PreferFirstLocation
+		aux.shuffleLocations = opts.ShuffleLocations
+	}
 	locationSets[name] = aux
 	return nil
 }

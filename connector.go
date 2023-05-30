@@ -33,22 +33,31 @@ func portionOfTimeoutDuration(remainNanoseconds, timeoutWeight, totalTimeoutWeig
 
 // RoundRobinDialContext implements `DialContextFunc` of `github.com/go-sql-driver/mysql` driver.
 func RoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
-	parsedAddr := parseAddress(addr)
-	if nil == parsedAddr {
-		return nil, &LocationSyntaxErr{LocationText: addr}
-	}
-	locSet := getLocationSet(parsedAddr.locationName)
+	locSet := getLocationSet(addr)
 	if nil == locSet {
-		return nil, &UnknownLocationsErr{Name: parsedAddr.locationName}
+		return nil, &UnknownLocationsErr{Name: addr}
 	}
-	locations := locSet.shuffledLocations(parsedAddr.orderedCount)
+	locSet.lck.Lock()
+	defer locSet.lck.Unlock()
+	if locSet.shuffleOnNextDial {
+		var skipCount int
+		if locSet.preferFirstLocation {
+			skipCount = 1
+		}
+		locSet.shuffleLocationsInPlace(skipCount)
+		locSet.shuffleOnNextDial = false
+	}
+	// locations := locSet.shuffledLocations(parsedAddr.orderedCount)
 	baseTime, remainNanoseconds, err := getContextRemainNanoseconds(ctx)
 	if nil != err {
 		return nil, err
 	}
 	dailsErr := &DialsErr{}
 	var targetTimeoutWeight int64
-	for _, targetLoc := range locations {
+	locSize := len(locSet.locations)
+	for targetOffset := 0; targetOffset < locSize; targetOffset++ {
+		targetIndex := (targetOffset + locSet.nextDialLocation) % locSize
+		targetLoc := locSet.locations[targetIndex]
 		targetTimeoutWeight += targetLoc.TimeoutWeight
 		var timeoutDuration time.Duration
 		if remainNanoseconds == 0 {
@@ -61,6 +70,11 @@ func RoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
 		if netConn, err := targetLoc.dialContext(ctx, timeoutDuration, baseTime); nil != err {
 			dailsErr.append(err)
 		} else {
+			if (!locSet.preferFirstLocation) || (targetIndex != 0) {
+				nextDialLoc := (targetIndex + 1) % locSize
+				locSet.shuffleOnNextDial = locSet.shuffleLocations && (nextDialLoc <= locSet.nextDialLocation)
+				locSet.nextDialLocation = nextDialLoc
+			}
 			return netConn, nil
 		}
 	}
