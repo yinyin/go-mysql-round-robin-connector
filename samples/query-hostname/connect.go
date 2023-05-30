@@ -13,10 +13,10 @@ import (
 const defaultLocationName = "location-1"
 const dialerName = "rr-conn"
 
-func connectMySQL(username, password, dbName, extraAddrPath string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location) (conn *sql.DB, err error) {
+func connectMySQL(username, password, dbName, extraAddrPath string, timeoutDuration time.Duration, serverLocations []mysqlroundrobinconnector.Location, opts *mysqlroundrobinconnector.Options) (conn *sql.DB, err error) {
 	mysqldriver.RegisterDialContext(dialerName, mysqlroundrobinconnector.RoundRobinDialContext) // TODO: go-sql-driver/mysql 1.4.3+
 	// mysqldriver.RegisterDial(dialerName, mysqlroundrobinconnector.RoundRobinDial)
-	if err = mysqlroundrobinconnector.RegisterLocations(defaultLocationName, serverLocations); nil != err {
+	if err = mysqlroundrobinconnector.RegisterLocations(defaultLocationName, serverLocations, opts); nil != err {
 		return
 	}
 	cfg := mysqldriver.NewConfig()
@@ -35,5 +35,9 @@ func connectMySQL(username, password, dbName, extraAddrPath string, timeoutDurat
 	// cfg.ParseTime = true
 	dsn := cfg.FormatDSN()
 	log.Printf("INFO: connecting with DSN: %s", dsn)
-	return sql.Open("mysql", dsn)
+	if conn, err = sql.Open("mysql", dsn); nil != err {
+		return
+	}
+	conn.SetMaxIdleConns(0)
+	return
 }
