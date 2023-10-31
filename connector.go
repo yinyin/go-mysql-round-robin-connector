@@ -88,3 +88,40 @@ func RoundRobinDial(addr string) (net.Conn, error) {
 	defer cancel()
 	return RoundRobinDialContext(timeoutCtx, addr)
 }
+
+// LazyRoundRobinDialContext implements `DialContextFunc` of `github.com/go-sql-driver/mysql` driver.
+func LazyRoundRobinDialContext(ctx context.Context, addr string) (net.Conn, error) {
+	locSet := getLocationSet(addr)
+	if nil == locSet {
+		return nil, &UnknownLocationsErr{Name: addr}
+	}
+	locSet.lck.Lock()
+	defer locSet.lck.Unlock()
+	baseTime, remainNanoseconds, err := getContextRemainNanoseconds(ctx)
+	if nil != err {
+		return nil, err
+	}
+	dailsErr := &DialsErr{}
+	var targetTimeoutWeight int64
+	locSize := len(locSet.locations)
+	for targetOffset := 0; targetOffset < locSize; targetOffset++ {
+		targetIndex := (targetOffset + locSet.nextDialLocation) % locSize
+		targetLoc := locSet.locations[targetIndex]
+		targetTimeoutWeight += targetLoc.TimeoutWeight
+		var timeoutDuration time.Duration
+		if remainNanoseconds == 0 {
+			timeoutDuration = defaultConnectionTimeout
+		} else if timeoutDuration = portionOfTimeoutDuration(
+			remainNanoseconds,
+			targetTimeoutWeight, locSet.totalTimeoutWeight); timeoutDuration <= 0 {
+			continue
+		}
+		if netConn, err := targetLoc.dialContext(ctx, timeoutDuration, baseTime); nil != err {
+			dailsErr.append(err)
+		} else {
+			locSet.nextDialLocation = targetIndex
+			return netConn, nil
+		}
+	}
+	return nil, dailsErr
+}
